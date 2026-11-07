@@ -393,6 +393,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
     <button id="play" class="primary">▶ 播放</button>
     <button id="pause" disabled>Ⅱ 暂停</button>
     <button id="stop" disabled>■ 停止</button>
+    <button onclick="downloadAudio()">下载音频</button>
   </div>
 
   <div class="status">
@@ -448,6 +449,7 @@ const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
    函数解析器
 ========================== */
 
+
 function compileExpression(source, variable) {
 
   let s = source.trim()
@@ -460,13 +462,11 @@ function compileExpression(source, variable) {
   }
 
   // 允许的数学函数
-  const allowed = [
-    "sin","cos","tan",
-    "asin","acos","atan",
-    "sqrt","abs","sign",
-    "log","log10","exp",
-    "floor","ceil","round",
-    "min","max","pow"
+  const allowedFunctions = [
+    "sin", "cos", "tan", "asin", "acos", "atan",
+    "sqrt", "abs", "sign", "log", "log10", "exp",
+    "floor", "ceil", "round", "min", "max", "pow",
+    "mod", "gcd", "lcm"
   ];
 
   // 检查表达式中的变量和函数
@@ -477,10 +477,9 @@ function compileExpression(source, variable) {
   const identifiers = s.match(/[a-zA-Z_]\w*/g) || [];
 
   for (const name of identifiers) {
-
     if (
       name !== variable &&
-      !allowed.includes(name) &&
+      !allowedFunctions.includes(name) &&
       !["pi","PI","e","E"].includes(name)
     ) {
       throw Error(
@@ -506,13 +505,50 @@ function compileExpression(source, variable) {
     })[m]
   );
 
+  // 数学取模
+  const mod = (a, b) => {
+    if (b === 0) return NaN;
+    return ((a % b) + b) % b;
+  };
+
+  // 最大公约数（欧几里得算法）
+  const gcd = (a, b) => {
+    if (!Number.isInteger(a) || !Number.isInteger(b)) {
+      return NaN;
+    }
+
+    a = Math.abs(a);
+    b = Math.abs(b);
+
+    while (b !== 0) {
+      [a, b] = [b, a % b];
+    }
+
+    return a;
+  };
+
+  // 最小公倍数
+  const lcm = (a, b) => {
+    if (!Number.isInteger(a) || !Number.isInteger(b)) {
+      return NaN;
+    }
+
+    if (a === 0 || b === 0) return 0;
+
+    return Math.abs(a / gcd(a, b) * b);
+  };
+
   let fn;
 
   try {
-    fn = new Function(
-      variable,
-      '"use strict"; return (' + s + ');'
+    // 使用闭包传入自定义函数
+    const factory = new Function(
+      "mod", "gcd", "lcm",
+      '"use strict"; return function(' + variable + '){ return (' + s + '); };'
     );
+
+    fn = factory(mod, gcd, lcm);
+
   } catch(e) {
     throw Error("表达式无法解析：" + e.message);
   }
@@ -529,7 +565,6 @@ function compileExpression(source, variable) {
 
   return fn;
 }
-
 
 function valueAt(fn,x) {
   try {
@@ -943,6 +978,148 @@ function fadeOut() {
   }
 }
 
+
+function downloadAudio() {
+
+  const sampleRate = 44100;
+  const duration = T;
+  const totalSamples = Math.floor(sampleRate * duration);
+
+  if (!Number.isFinite(duration) || duration <= 0) {
+    alert("音频时长无效。");
+    return;
+  }
+
+  if (totalSamples > sampleRate * 600) {
+    alert("音频时长不能超过600秒。");
+    return;
+  }
+
+  const samples = new Float32Array(totalSamples);
+
+  let phase = 0;
+  let peak = 0;
+
+  // 第一阶段：生成音频采样
+  for (let i = 0; i < totalSamples; i++) {
+
+    const t = i / sampleRate;
+
+    // 音调函数值：单位为半音
+    const semitones = valueAt(pitchFn, t);
+
+    if (!Number.isFinite(semitones)) {
+      samples[i] = 0;
+      continue;
+    }
+
+    // 将半音转换为频率
+    const frequency = 261.625565 *
+      Math.pow(2, semitones / 12);
+
+    // 限制频率，避免超过奈奎斯特频率
+    const safeFrequency = Math.min(
+      Math.max(frequency, 0),
+      sampleRate * 0.45
+    );
+
+    // 计算当前相位
+    const phi = phase % (2 * Math.PI);
+
+    // 音色函数决定波形
+    let sample = valueAt(timbreFn, phi);
+
+    if (!Number.isFinite(sample)) {
+      sample = 0;
+    }
+
+    samples[i] = sample;
+    peak = Math.max(peak, Math.abs(sample));
+
+    // 累积相位
+    phase += 2 * Math.PI * safeFrequency / sampleRate;
+  }
+
+  // 第二阶段：归一化并添加淡入淡出
+  const fadeLength = Math.floor(sampleRate * 0.01);
+
+  for (let i = 0; i < totalSamples; i++) {
+
+    let fade = 1;
+
+    if (i < fadeLength) {
+      fade = i / fadeLength;
+    }
+
+    if (i >= totalSamples - fadeLength) {
+      fade = Math.min(
+        fade,
+        (totalSamples - 1 - i) / fadeLength
+      );
+    }
+
+    const normalized = peak > 0
+      ? samples[i] / peak * 0.8
+      : 0;
+
+    samples[i] = normalized * Math.max(0, fade);
+  }
+
+  // 第三阶段：生成 WAV 文件
+  const dataSize = totalSamples * 2;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  function writeString(offset, str) {
+    for (let i = 0; i < str.length; i++) {
+      view.setUint8(offset + i, str.charCodeAt(i));
+    }
+  }
+
+  // WAV 文件头
+  writeString(0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(8, "WAVE");
+
+  // fmt 子块
+  writeString(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+
+  // data 子块
+  writeString(36, "data");
+  view.setUint32(40, dataSize, true);
+
+  // 写入 PCM 数据
+  for (let i = 0; i < totalSamples; i++) {
+    const sample = Math.max(-1, Math.min(1, samples[i]));
+
+    const pcm = sample < 0
+      ? sample * 32768
+      : sample * 32767;
+
+    view.setInt16(44 + i * 2, pcm, true);
+  }
+
+  // 下载文件
+  const blob = new Blob([buffer], {
+    type: "audio/wav"
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "函数声音实验.wav";
+  link.click();
+
+  URL.revokeObjectURL(url);
+}
 
 /* ==========================
    播放
