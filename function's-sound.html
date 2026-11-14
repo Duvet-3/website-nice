@@ -390,6 +390,10 @@ button:disabled { opacity: .4; cursor: not-allowed; }
   >
 
   <div class="controls">
+    <button id="loopToggle">循环播放：关</button>
+  </div>
+
+  <div class="controls">
     <button id="play" class="primary">▶ 播放</button>
     <button id="pause" disabled>Ⅱ 暂停</button>
     <button id="stop" disabled>■ 停止</button>
@@ -438,6 +442,7 @@ let osc = null;
 let gain = null;
 
 let playing = false;
+let loopPlayback = false;
 let raf = 0;
 
 let activeGraph = "pitch";
@@ -1214,9 +1219,14 @@ function tick() {
 
   if (elapsed>=T) {
 
-    elapsed=T;
-    finish();
-    return;
+    if (loopPlayback) {
+      elapsed = 0;
+      startAt = performance.now();
+    } else {
+      elapsed = T;
+      finish();
+      return;
+    }
   }
 
   const f = frequencyAt(elapsed);
@@ -1344,6 +1354,18 @@ function switchGraph(which) {
 ========================== */
 
 $("apply").addEventListener("click",apply);
+
+$("loopToggle").addEventListener("click",()=>{
+  loopPlayback = !loopPlayback;
+
+  $("loopToggle").textContent =
+    "循环播放："+(loopPlayback?"开":"关");
+
+  say(loopPlayback
+    ? "已开启循环播放。"
+    : "已关闭循环播放。"
+  );
+});
 
 $("play").addEventListener("click",play);
 $("pause").addEventListener("click",pause);
