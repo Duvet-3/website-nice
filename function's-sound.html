@@ -4,1441 +4,587 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>函数声音实验室</title>
-
 <style>
-:root {
-  color-scheme: dark;
-  --bg: #0b1220;
-  --panel: #142238;
-  --line: #263852;
-  --text: #e7f0fb;
-  --muted: #8fa4bd;
-  --cyan: #55d9ed;
-}
+:root{color-scheme:dark;--bg:#0b1220;--panel:#142238;--line:#263852;--text:#e7f0fb;--muted:#8fa4bd;--cyan:#55d9ed}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at 15% 0%,#142944,transparent 45%),var(--bg);color:var(--text);font:15px/1.5 system-ui,sans-serif}
+main{max-width:1250px;margin:auto;padding:30px 22px 48px}
+h1{margin:0 0 5px;font-size:26px}h2{font-size:15px;margin:0 0 14px}
+.sub,.hint,.note{color:var(--muted);font-size:12px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.panel,.unit{background:linear-gradient(160deg,#142238,#101a2b);border:1px solid var(--line);border-radius:14px;padding:17px;box-shadow:0 12px 35px #0002}
+.global-console{margin-bottom:18px}
+.global-controls,.controls,.examples,.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+button{background:#172b43;color:#e6f3ff;border:1px solid #3b5877;padding:9px 13px;border-radius:8px;cursor:pointer;font:inherit}
+button:hover{filter:brightness(1.2)}button:disabled{opacity:.4;cursor:not-allowed}
+.unit-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px;padding:0 0 10px;border-bottom:1px solid var(--line)}
+.unit-tab{display:flex;align-items:center;gap:8px;background:#0d1b2d;color:#a9bfd5}
+.unit-tab.active{background:#17445a;border-color:var(--cyan);color:#fff}
+.unit-tab-name{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.unit-tab-index{font-size:11px;opacity:.7}
+.units{display:block}
+.unit[hidden]{display:none!important}
+.primary{background:linear-gradient(135deg,#187d9b,#2869b8);border-color:#3cb9d1}
+.danger{border-color:#81505a;color:#ffc2c2}
+.chip{font-size:12px;padding:5px 10px;border-radius:20px;background:#14263b;color:#b8d5ed}
+.tab{font-size:13px;background:#0d1b2d;color:#a9bfd5}.tab.active{background:#17445a;border-color:var(--cyan);color:white}
+.units{display:grid;gap:18px}
+.unit-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.unit-title{font-weight:650}
+.unit-layout{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,1fr);gap:15px}
+.graph-wrap{background:#091321;border:1px solid #263b55;border-radius:10px;overflow:hidden}
+canvas{width:100%;height:300px;display:block}
+.graph-foot{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px;margin-top:8px}
+.readout{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.metric{background:#0b1727;border:1px solid #203650;border-radius:9px;padding:9px}
+.metric span{display:block;color:var(--muted);font-size:11px}.metric strong{font:15px monospace}
+.side{display:flex;flex-direction:column;gap:13px}
+label{display:block;font-size:13px;margin:0 0 7px;color:#b9c9dc}
+input{width:100%;background:#091525;color:var(--text);border:1px solid #304762;border-radius:8px;padding:10px 11px;font:inherit;outline:none}
+input:focus{border-color:var(--cyan)}input.formula{font:15px monospace}
+.hint{margin-top:7px;line-height:1.7}
+.field{margin-bottom:12px}
+.section-gap{height:1px;background:var(--line);margin:14px 0}
+.status{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;margin:10px 0}
+.dot{width:8px;height:8px;border-radius:50%;background:#71849a}.dot.live{background:#56e0b1;box-shadow:0 0 10px #56e0b1}
+.console{background:#081321;border:1px solid #203650;border-radius:9px;min-height:48px;padding:10px;color:#a9c3dc;font:12px/1.6 monospace;overflow-wrap:anywhere}
+.console.error{color:#ff8c8c}
+.mute.active{background:#5b3540;border-color:#bd6678;color:#fff}
+.note{margin-top:10px;line-height:1.8}
+@media(max-width:850px){.unit-layout{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}canvas{height:260px}}
 
-* { box-sizing: border-box; }
+.rename-dialog-backdrop{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.68);display:grid;place-items:center;padding:20px}
+.rename-dialog{width:min(360px,100%);background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:0 18px 60px #0009}
+.rename-dialog h3{margin:0 0 14px;font-size:17px}
+.rename-dialog input{width:100%;box-sizing:border-box;background:#0b1728;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:11px 12px;font:inherit;outline:none}
+.rename-dialog input:focus{border-color:var(--cyan)}
+.rename-dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 
-body {
-  margin: 0;
-  background: radial-gradient(ellipse at 15% 0%, #142944, transparent 45%), var(--bg);
-  color: var(--text);
-  font: 15px/1.5 system-ui, sans-serif;
-}
-
-main {
-  max-width: 1180px;
-  margin: auto;
-  padding: 32px 22px 48px;
-}
-
-h1 { margin: 0 0 5px; font-size: 26px; }
-h2 { font-size: 15px; margin: 0 0 14px; }
-.sub, .hint, .note { color: var(--muted); font-size: 12px; }
-
-.top {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 22px;
-}
-
-.layout {
-  display: grid;
-  grid-template-columns: 1.65fr 0.85fr;
-  gap: 16px;
-}
-
-.panel {
-  background: linear-gradient(160deg, #142238, #101a2b);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 18px;
-  box-shadow: 0 12px 35px #0002;
-}
-
-.side {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-label {
-  display: block;
-  font-size: 13px;
-  margin-bottom: 7px;
-  color: #b9c9dc;
-}
-
-input {
-  width: 100%;
-  background: #091525;
-  color: var(--text);
-  border: 1px solid #304762;
-  border-radius: 8px;
-  padding: 11px 12px;
-  font: inherit;
-  outline: none;
-}
-
-input:focus {
-  border-color: var(--cyan);
-}
-
-.formula {
-  font: 16px monospace;
-}
-
-.hint {
-  margin-top: 8px;
-  line-height: 1.7;
-}
-
-.graph-wrap {
-  background: #091321;
-  border: 1px solid #263b55;
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-canvas {
-  width: 100%;
-  height: 380px;
-  display: block;
-}
-
-.graph-foot {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  color: var(--muted);
-  font-size: 12px;
-  margin-top: 9px;
-}
-
-.controls, .examples {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 13px;
-}
-
-button {
-  background: #172b43;
-  color: #e6f3ff;
-  border: 1px solid #3b5877;
-  padding: 9px 13px;
-  border-radius: 8px;
-  cursor: pointer;
-  font: inherit;
-}
-
-button:hover { filter: brightness(1.2); }
-button:disabled { opacity: .4; cursor: not-allowed; }
-
-.primary {
-  background: linear-gradient(135deg, #187d9b, #2869b8);
-  border-color: #3cb9d1;
-}
-
-.chip {
-  font-size: 12px;
-  padding: 5px 10px;
-  border-radius: 20px;
-  background: #14263b;
-  color: #b8d5ed;
-}
-
-.tab {
-  font-size: 13px;
-  background: #0d1b2d;
-  color: #a9bfd5;
-}
-
-.tab.active {
-  background: #17445a;
-  border-color: var(--cyan);
-  color: white;
-}
-
-.section-gap {
-  height: 1px;
-  background: var(--line);
-  margin: 18px 0;
-}
-
-.readout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 9px;
-  margin-top: 14px;
-}
-
-.metric {
-  background: #0b1727;
-  border: 1px solid #203650;
-  border-radius: 9px;
-  padding: 10px;
-}
-
-.metric span {
-  display: block;
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.metric strong {
-  font: 16px monospace;
-}
-
-.status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 12px;
-  margin: 13px 0;
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #71849a;
-}
-
-.dot.live {
-  background: #56e0b1;
-  box-shadow: 0 0 10px #56e0b1;
-}
-
-.console {
-  background: #081321;
-  border: 1px solid #203650;
-  border-radius: 9px;
-  min-height: 75px;
-  padding: 11px;
-  color: #a9c3dc;
-  font: 12px/1.6 monospace;
-  overflow-wrap: anywhere;
-}
-
-.console.error { color: #ff8c8c; }
-
-.note {
-  margin-top: 18px;
-  line-height: 1.8;
-}
-
-@media(max-width:800px) {
-  .layout { grid-template-columns: 1fr; }
-  .top { flex-direction: column; }
-  canvas { height: 300px; }
-}
 </style>
 </head>
-
 <body>
 <main>
-
 <header class="top">
-  <div>
-    <h1>函数声音实验室</h1>
-    <div class="sub">
-      用数学函数塑造声音 · 每个乐段由音调函数和音色函数共同定义
-    </div>
-  </div>
-  <div class="sub">基础原型 03</div>
+  <div><h1>函数声音实验室</h1><div class="sub">用数学函数塑造声音 · 每个乐段由音调函数和音色函数共同定义</div></div>
+  <div class="sub">多函数版本</div>
 </header>
 
-<div class="layout">
-
-<!-- 函数显示区 -->
-<section class="panel">
-
-  <h2>函数显示区</h2>
-
-  <div class="controls" style="margin:0 0 11px">
-    <button id="pitchTab" class="tab active">
-      音调函数 y=f(t)
-    </button>
-
-    <button id="timbreTab" class="tab">
-      音色函数 y=g(φ)
-    </button>
+<section class="panel global-console">
+  <h2>总控制台</h2>
+  <div class="global-controls">
+    <button id="playAll" class="primary">▶ 全部播放</button>
+    <button id="pauseAll">Ⅱ 全部暂停</button>
+    <button id="stopAll">■ 全部停止</button>
+    <button id="addUnit">＋ 添加函数单元</button>
   </div>
-
-  <div class="graph-wrap">
-    <canvas id="plot"></canvas>
-  </div>
-
-  <div class="graph-foot">
-    <span id="axisX">横轴：时间 t（秒）</span>
-    <span id="axisY">纵轴：音高 y（半音）</span>
-  </div>
-
-  <div class="readout">
-    <div class="metric">
-      <span>当前时间</span>
-      <strong id="timeRead">0.00 s</strong>
-    </div>
-
-    <div class="metric">
-      <span>当前音高</span>
-      <strong id="pitchRead">C4 · 0</strong>
-    </div>
-  </div>
-
-  <div class="note" id="graphNote">
-    音调函数的横轴范围为 0 至 T。
-  </div>
-
+  <div class="status"><span class="dot" id="globalDot"></span><span id="globalState">待机</span></div>
+  <div class="console" id="globalConsole">系统就绪。可以添加多个函数单元并分别控制。</div>
 </section>
 
-
-<div class="side">
-
-<!-- 函数输入区 -->
-<section class="panel">
-
-  <h2>函数输入区</h2>
-
-  <label>音调函数 y=f(t)</label>
-
-  <input
-    id="pitchFormula"
-    class="formula"
-    value="12*sin(2*pi*t)"
-    spellcheck="false"
-  >
-
-  <div class="hint">
-    自变量为 t，单位为秒。函数值表示相对中央 C 的半音数。
-    0=C4，12=C5，-12=C3。
-  </div>
-
-  <div class="examples">
-    <button class="chip" data-target="pitch" data-f="t">y=t</button>
-    <button class="chip" data-target="pitch" data-f="12*sin(2*pi*t)">正弦变化</button>
-    <button class="chip" data-target="pitch" data-f="3*t">线性上行</button>
-    <button class="chip" data-target="pitch" data-f="0">固定音高</button>
-  </div>
-
-  <div class="section-gap"></div>
-
-  <label>音色函数 y=g(φ)</label>
-
-  <input
-    id="timbreFormula"
-    class="formula"
-    value="sin(phi)"
-    spellcheck="false"
-  >
-
-  <div class="hint">
-    自变量为 φ，表示声音振动的相位，单位为弧度。
-    一个完整周期为 0 至 2π。
-  </div>
-
-  <div class="examples">
-    <button class="chip" data-target="timbre" data-f="sin(phi)">
-      正弦波
-    </button>
-
-    <button class="chip" data-target="timbre" data-f="sign(sin(phi))">
-      方波
-    </button>
-
-    <button class="chip" data-target="timbre" data-f="(2/pi)*asin(sin(phi))">
-      三角波
-    </button>
-
-    <button class="chip" data-target="timbre" data-f="2*(phi/(2*pi)-floor(phi/(2*pi)+0.5))">
-      锯齿波
-    </button>
-  </div>
-
-  <div class="hint">
-    也可以自行组合函数，例如：
-    <br>
-    sin(phi)+0.3*sin(3*phi)
-    <br>
-    sin(phi)+0.5*sin(2*phi)
-  </div>
-
-  <div class="controls">
-    <button id="apply" class="primary">
-      应用两个函数
-    </button>
-  </div>
-
-</section>
-
-
-<!-- 控制台 -->
-<section class="panel">
-
-  <h2>控制台</h2>
-
-  <label>乐段长度 T（秒）</label>
-
-  <input
-    id="duration"
-    type="number"
-    min="0.1"
-    max="600"
-    step="0.1"
-    value="5"
-  >
-
-  <div class="controls">
-    <button id="loopToggle">循环播放：关</button>
-  </div>
-
-  <div class="controls">
-    <button id="play" class="primary">▶ 播放</button>
-    <button id="pause" disabled>Ⅱ 暂停</button>
-    <button id="stop" disabled>■ 停止</button>
-    <button onclick="downloadAudio()">下载音频</button>
-  </div>
-
-  <div class="status">
-    <span id="dot" class="dot"></span>
-    <span id="state">待机</span>
-  </div>
-
-  <div id="console" class="console">
-    系统就绪。
-  </div>
-
-</section>
-
-</div>
-</div>
+<nav class="unit-tabs" id="unitTabs" aria-label="函数单元标签页"></nav>
+<div class="units" id="units"></div>
+<div class="note">说明：每个函数单元包含独立的音调函数、音色函数、乐段长度和播放控制。全部播放会让所有单元从头同步播放；静音不会影响该单元的播放进度。</div>
 </main>
 
+<template id="unitTemplate">
+<section class="unit">
+  <div class="unit-head">
+    <div class="unit-title">函数单元</div>
+    <div class="controls" style="margin-top:0">
+      <button class="rename">重命名</button>
+      <button class="remove danger">删除单元</button>
+    </div>
+  </div>
+  <div class="unit-layout">
+    <section>
+      <h2>函数显示区</h2>
+      <div class="tabs">
+        <button class="tab pitch-tab active">音调函数 y=f(t)</button>
+        <button class="tab timbre-tab">音色函数 y=g(φ)</button>
+      </div>
+      <div class="graph-wrap"><canvas class="plot"></canvas></div>
+      <div class="graph-foot"><span class="axis-x">横轴：时间 t（秒）</span><span class="axis-y">纵轴：音高 y（半音）</span></div>
+      <div class="readout">
+        <div class="metric"><span>当前时间</span><strong class="time-read">0.00 s</strong></div>
+        <div class="metric"><span>当前音高</span><strong class="pitch-read">C4 · 0</strong></div>
+      </div>
+      <div class="note graph-note">音调函数的横轴范围为 0 至 T。</div>
+    </section>
+
+    <div class="side">
+      <section>
+        <h2>函数输入区</h2>
+        <div class="field">
+          <label>音调函数 y=f(t)</label>
+          <input class="formula pitch-input" value="12*sin(2*pi*t)" spellcheck="false">
+          <div class="hint">自变量为 t，单位为秒。函数值表示相对中央 C 的半音数。0=C4，12=C5，-12=C3。</div>
+          <div class="examples">
+            <button class="chip" data-target="pitch" data-f="t">y=t</button>
+            <button class="chip" data-target="pitch" data-f="12*sin(2*pi*t)">正弦变化</button>
+            <button class="chip" data-target="pitch" data-f="3*t">线性上行</button>
+            <button class="chip" data-target="pitch" data-f="0">固定音高</button>
+          </div>
+        </div>
+        <div class="section-gap"></div>
+        <div class="field">
+          <label>音色函数 y=g(φ)</label>
+          <input class="formula timbre-input" value="sin(phi)" spellcheck="false">
+          <div class="hint">自变量为 φ，表示声音振动的相位，单位为弧度。一个完整周期为 0 至 2π。</div>
+          <div class="examples">
+            <button class="chip" data-target="timbre" data-f="sin(phi)">正弦波</button>
+            <button class="chip" data-target="timbre" data-f="sign(sin(phi))">方波</button>
+            <button class="chip" data-target="timbre" data-f="(2/pi)*asin(sin(phi))">三角波</button>
+            <button class="chip" data-target="timbre" data-f="2*(phi/(2*pi)-floor(phi/(2*pi)+0.5))">锯齿波</button>
+          </div>
+          <div class="hint">也可以组合函数，例如：<br>sin(phi)+0.3*sin(3*phi)</div>
+        </div>
+        <div class="controls"><button class="apply primary">应用两个函数</button></div>
+      </section>
+
+      <section>
+        <h2>控制台</h2>
+        <div class="field">
+          <label>乐段长度 T（秒）</label>
+          <input class="duration" type="number" min="0.1" max="600" step="0.1" value="5">
+        </div>
+        <div class="controls">
+          <button class="loop-toggle">循环播放：关</button>
+          <button class="mute">静音：关</button>
+        </div>
+        <div class="controls">
+          <button class="play primary">▶ 播放</button>
+          <button class="pause" disabled>Ⅱ 暂停</button>
+          <button class="stop" disabled>■ 停止</button>
+          <button class="download">下载本单元 WAV</button>
+        </div>
+        <div class="status"><span class="dot"></span><span class="state">待机</span></div>
+        <div class="console">系统就绪。</div>
+      </section>
+    </div>
+  </div>
+</section>
+</template>
 
 <script>
 (() => {
-
-const $ = id => document.getElementById(id);
-
-const canvas = $("plot");
-const ctx = canvas.getContext("2d");
-
-const pitchInput = $("pitchFormula");
-const timbreInput = $("timbreFormula");
-const durationInput = $("duration");
+"use strict";
 
 const TAU = Math.PI * 2;
-
-let pitchFn = t => 12 * Math.sin(TAU * t);
-let timbreFn = phi => Math.sin(phi);
-
-let T = 5;
-let elapsed = 0;
-let startAt = 0;
-
-let audio = null;
-let osc = null;
-let gain = null;
-
-let playing = false;
-let loopPlayback = false;
-let raf = 0;
-
-let activeGraph = "pitch";
-
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
-
-
-/* ==========================
-   函数解析器
-========================== */
-
+const units = [];
+let audio = null;
+let raf = 0;
+let nextId = 1;
+let activeUnitId = null;
 
 function compileExpression(source, variable) {
-
-  let s = source.trim()
-    .replace(/^y\s*=\s*/i,"")
-    .replace(/φ/g,"phi")
-    .replace(/\^/g,"**");
-
-  if (!s) {
-    throw Error("请输入函数表达式。");
-  }
-
-  // 允许的数学函数
-  const allowedFunctions = [
-    "sin", "cos", "tan", "asin", "acos", "atan",
-    "sqrt", "abs", "sign", "log", "log10", "exp",
-    "floor", "ceil", "round", "min", "max", "pow",
-    "mod", "gcd", "lcm"
-  ];
-
-  // 检查表达式中的变量和函数
-  if (!/^[a-zA-Z0-9_\s+\-*/().,%*]+$/.test(s)) {
-    throw Error("表达式包含不支持的字符。");
-  }
-
+  let s = source.trim().replace(/^y\s*=\s*/i,"").replace(/φ/g,"phi").replace(/\^/g,"**");
+  if (!s) throw Error("请输入函数表达式。");
+  const allowed = ["sin","cos","tan","asin","acos","atan","sqrt","abs","sign","log","log10","exp","floor","ceil","round","min","max","pow","mod","gcd","lcm"];
+  if (!/^[a-zA-Z0-9_\s+\-*/().,%*]+$/.test(s)) throw Error("表达式包含不支持的字符。");
   const identifiers = s.match(/[a-zA-Z_]\w*/g) || [];
-
   for (const name of identifiers) {
-    if (
-      name !== variable &&
-      !allowedFunctions.includes(name) &&
-      !["pi","PI","e","E"].includes(name)
-    ) {
-      throw Error(
-        "未知变量或函数：" + name +
-        "。当前自变量应为 " + variable + "。"
-      );
+    if (name !== variable && !allowed.includes(name) && !["pi","PI","e","E"].includes(name)) {
+      throw Error("未知变量或函数：" + name + "。当前自变量应为 " + variable + "。");
     }
   }
-
-  // 转换为 JavaScript Math 函数
-  s = s.replace(
-    /\b(sin|cos|tan|asin|acos|atan|sqrt|abs|sign|log|log10|exp|floor|ceil|round|min|max|pow)\s*\(/g,
-    "Math.$1("
-  );
-
-  s = s.replace(
-    /\b(pi|PI|e|E)\b/g,
-    m => ({
-      pi:"Math.PI",
-      PI:"Math.PI",
-      e:"Math.E",
-      E:"Math.E"
-    })[m]
-  );
-
-  // 数学取模
-  const mod = (a, b) => {
-    if (b === 0) return NaN;
-    return ((a % b) + b) % b;
-  };
-
-  // 最大公约数（欧几里得算法）
-  const gcd = (a, b) => {
-    if (!Number.isInteger(a) || !Number.isInteger(b)) {
-      return NaN;
-    }
-
-    a = Math.abs(a);
-    b = Math.abs(b);
-
-    while (b !== 0) {
-      [a, b] = [b, a % b];
-    }
-
+  s = s.replace(/\b(sin|cos|tan|asin|acos|atan|sqrt|abs|sign|log|log10|exp|floor|ceil|round|min|max|pow)\s*\(/g,"Math.$1(");
+  s = s.replace(/\b(pi|PI|e|E)\b/g,m=>({pi:"Math.PI",PI:"Math.PI",e:"Math.E",E:"Math.E"})[m]);
+  const mod = (a,b) => b===0 ? NaN : ((a%b)+b)%b;
+  const gcd = (a,b) => {
+    if (!Number.isInteger(a)||!Number.isInteger(b)) return NaN;
+    a=Math.abs(a);b=Math.abs(b);
+    while(b!==0)[a,b]=[b,a%b];
     return a;
   };
-
-  // 最小公倍数
-  const lcm = (a, b) => {
-    if (!Number.isInteger(a) || !Number.isInteger(b)) {
-      return NaN;
-    }
-
-    if (a === 0 || b === 0) return 0;
-
-    return Math.abs(a / gcd(a, b) * b);
-  };
-
+  const lcm = (a,b) => (!Number.isInteger(a)||!Number.isInteger(b)) ? NaN : (a===0||b===0 ? 0 : Math.abs(a/gcd(a,b)*b));
   let fn;
-
   try {
-    // 使用闭包传入自定义函数
-    const factory = new Function(
-      "mod", "gcd", "lcm",
-      '"use strict"; return function(' + variable + '){ return (' + s + '); };'
-    );
-
-    fn = factory(mod, gcd, lcm);
-
-  } catch(e) {
-    throw Error("表达式无法解析：" + e.message);
-  }
-
+    fn = new Function("mod","gcd","lcm",'"use strict";return function('+variable+'){return ('+s+');};')(mod,gcd,lcm);
+  } catch(e) { throw Error("表达式无法解析："+e.message); }
   try {
-    const test = fn(0.37);
-
-    if (typeof test !== "number") {
-      throw Error("函数结果必须是数值。");
-    }
-  } catch(e) {
-    throw Error("函数计算失败：" + e.message);
-  }
-
+    if (typeof fn(0.37)!=="number") throw Error("函数结果必须是数值。");
+  } catch(e) { throw Error("函数计算失败："+e.message); }
   return fn;
 }
 
 function valueAt(fn,x) {
-  try {
-    const v = Number(fn(x));
-    return Number.isFinite(v) ? v : NaN;
-  } catch {
-    return NaN;
-  }
+  try { const v=Number(fn(x)); return Number.isFinite(v)?v:NaN; }
+  catch { return NaN; }
+}
+function say(u,msg,error=false) {
+  u.el.console.textContent=msg;
+  u.el.console.classList.toggle("error",error);
+}
+function setState(u,msg,live=false) {
+  u.el.state.textContent=msg;
+  u.el.dot.classList.toggle("live",live);
+  u.el.play.disabled=live;
+  u.el.pause.disabled=!live;
+  u.el.stop.disabled=!live && u.elapsed===0;
+}
+function noteName(semi) {
+  const n=Math.round(semi), names=["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+  const midi=60+n;
+  return names[((midi%12)+12)%12]+(Math.floor(midi/12)-1)+" · "+(n>=0?"+":"")+n;
+}
+function frequencyAt(u,t) {
+  const y=valueAt(u.pitchFn,t);
+  if(!Number.isFinite(y)) return 0;
+  return 261.625565*Math.pow(2,clamp(y,-96,96)/12);
 }
 
-
-/* ==========================
-   控制台信息
-========================== */
-
-function say(msg,error=false) {
-  $("console").textContent = msg;
-  $("console").classList.toggle("error",error);
-}
-
-function setState(msg,live=false) {
-  $("state").textContent = msg;
-  $("dot").classList.toggle("live",live);
-}
-
-
-/* ==========================
-   函数图像绘制
-========================== */
-
-function resize() {
-
-  const r = canvas.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-
-  canvas.width = Math.round(r.width*dpr);
-  canvas.height = Math.round(r.height*dpr);
-
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-
-  draw();
-}
-
-
-function draw() {
-
-  const w = canvas.clientWidth;
-  const h = canvas.clientHeight;
-
-  if (!w || !h) return;
-
+function draw(u) {
+  const canvas=u.el.canvas,ctx=u.ctx,w=canvas.clientWidth,h=canvas.clientHeight;
+  if(!w||!h)return;
   ctx.clearRect(0,0,w,h);
+  const isPitch=u.activeGraph==="pitch",end=isPitch?u.T:TAU,fn=isPitch?u.pitchFn:u.timbreFn;
+  const values=[];
+  for(let i=0;i<=700;i++){const v=valueAt(fn,end*i/700);if(Number.isFinite(v)&&Math.abs(v)<1e8)values.push(v);}
+  let ymin=values.length?Math.min(...values):-1,ymax=values.length?Math.max(...values):1;
+  if(ymax-ymin<1e-8){ymin-=1;ymax+=1;}
+  const pad={l:55,r:18,t:20,b:36},pw=w-pad.l-pad.r,ph=h-pad.t-pad.b,margin=(ymax-ymin)*.12||1;
+  ymin-=margin;ymax+=margin;
+  const X=x=>pad.l+x/end*pw,Y=y=>pad.t+(ymax-y)/(ymax-ymin)*ph;
+  ctx.strokeStyle="#1c3048";ctx.lineWidth=1;ctx.fillStyle="#8fa4bd";ctx.font="11px system-ui";
+  for(let i=0;i<=5;i++){
+    const x=pad.l+pw*i/5,v=end*i/5;
+    ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+ph);ctx.stroke();
+    ctx.fillText(isPitch?v.toFixed(1):(v/Math.PI).toFixed(1)+"π",x-12,h-12);
+  }
+  for(let i=0;i<=4;i++){
+    const y=pad.t+ph*i/4,v=ymax-(ymax-ymin)*i/4;
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+pw,y);ctx.stroke();ctx.fillText(v.toFixed(2),5,y+4);
+  }
+  if(ymin<=0&&ymax>=0){
+    ctx.strokeStyle="#48627c";ctx.setLineDash([4,5]);ctx.beginPath();ctx.moveTo(pad.l,Y(0));ctx.lineTo(pad.l+pw,Y(0));ctx.stroke();ctx.setLineDash([]);
+  }
+  ctx.save();ctx.beginPath();ctx.rect(pad.l,pad.t,pw,ph);ctx.clip();
+  ctx.strokeStyle="#58dced";ctx.lineWidth=2.2;ctx.shadowColor="#58dced";ctx.shadowBlur=8;ctx.beginPath();
+  let pen=false;
+  for(let i=0;i<=1000;i++){
+    const x=end*i/1000,v=valueAt(fn,x);
+    if(!Number.isFinite(v)||Math.abs(v)>1e8){pen=false;continue;}
+    if(!pen){ctx.moveTo(X(x),Y(v));pen=true;}else ctx.lineTo(X(x),Y(v));
+  }
+  ctx.stroke();
+  if(isPitch&&u.playing){
+    const x=X(clamp(u.elapsed,0,u.T));ctx.shadowBlur=0;ctx.strokeStyle="#ffca75";ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+ph);ctx.stroke();
+  }
+  ctx.restore();
+  u.el.axisX.textContent=isPitch?"横轴：时间 t（秒）":"横轴：相位 φ（弧度）";
+  u.el.axisY.textContent=isPitch?"纵轴：音高 y（半音）":"纵轴：波形振幅";
+  u.el.graphNote.textContent=isPitch?"音调函数的横轴范围为 0 至 T，纵轴表示相对中央 C 的半音数。":"音色函数展示一个完整周期（0 至 2π）的波形。";
+}
+function resize(u) {
+  const r=u.el.canvas.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+  u.el.canvas.width=Math.round(r.width*dpr);u.el.canvas.height=Math.round(r.height*dpr);
+  u.ctx.setTransform(dpr,0,0,dpr,0,0);draw(u);
+}
+function updateReadout(u) {
+  u.el.timeRead.textContent=u.elapsed.toFixed(2)+" s";
+  const v=valueAt(u.pitchFn,u.elapsed);
+  u.el.pitchRead.textContent=Number.isFinite(v)?noteName(v):"—";
+}
 
-  const isPitch = activeGraph === "pitch";
-
-  const end = isPitch ? T : TAU;
-
-  const fn = isPitch ? pitchFn : timbreFn;
-
-  const values = [];
-
-  for (let i=0;i<=1200;i++) {
-
-    const v = valueAt(fn,end*i/1200);
-
-    if (Number.isFinite(v) && Math.abs(v)<1e8) {
-      values.push(v);
+function apply(u) {
+  try {
+    const pitch=compileExpression(u.el.pitchInput.value,"t");
+    const timbre=compileExpression(u.el.timbreInput.value,"phi");
+    for(let i=0;i<256;i++){
+      const v=valueAt(timbre,TAU*i/256);
+      if(!Number.isFinite(v)||Math.abs(v)>1e6)throw Error("音色函数在一个周期内出现无效值。");
     }
+    u.pitchFn=pitch;u.timbreFn=timbre;
+    if(u.playing&&u.osc)u.osc.setPeriodicWave(buildPeriodicWave(u));
+    draw(u);say(u,"两个函数已成功应用。");return true;
+  } catch(e) {say(u,e.message,true);return false;}
+}
+function buildPeriodicWave(u) {
+  const harmonics=64,samples=2048,real=new Float32Array(harmonics+1),imag=new Float32Array(harmonics+1),values=new Float64Array(samples);
+  let mean=0;
+  for(let i=0;i<samples;i++){
+    const v=valueAt(u.timbreFn,TAU*i/samples);
+    if(!Number.isFinite(v)||Math.abs(v)>1e6)throw Error("音色函数产生了无效波形。");
+    values[i]=v;mean+=v;
   }
-
-  let ymin = values.length ? Math.min(...values) : -1;
-  let ymax = values.length ? Math.max(...values) : 1;
-
-  if (ymax-ymin < 1e-8) {
-    ymin -= 1;
-    ymax += 1;
+  mean/=samples;
+  for(let n=1;n<=harmonics;n++){
+    let a=0,b=0;
+    for(let i=0;i<samples;i++){const phi=TAU*i/samples,v=values[i]-mean;a+=v*Math.cos(n*phi);b+=v*Math.sin(n*phi);}
+    real[n]=2*a/samples;imag[n]=2*b/samples;
   }
+  return audio.createPeriodicWave(real,imag,{disableNormalization:false});
+}
+async function ensureAudio() {
+  if(!audio){
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC)throw Error("当前浏览器不支持 Web Audio API。");
+    audio=new AC();
+  }
+  if(audio.state==="suspended")await audio.resume();
+}
+function stopNodes(u,fade=true) {
+  if(!u.osc)return;
+  const now=audio.currentTime;
+  try{
+    u.gain.gain.cancelScheduledValues(now);
+    if(fade){u.gain.gain.setTargetAtTime(0.0001,now,.012);u.osc.stop(now+.07);}
+    else u.osc.stop(now);
+  }catch{}
+  u.osc=null;u.gain=null;
+}
+function makeNodes(u,when) {
+  u.osc=audio.createOscillator();u.gain=audio.createGain();
+  u.osc.setPeriodicWave(buildPeriodicWave(u));
+  u.osc.frequency.setValueAtTime(Math.max(1,frequencyAt(u,u.elapsed)),when);
+  u.gain.gain.setValueAtTime(u.muted?0:0.0001,when);
+  if(!u.muted)u.gain.gain.setTargetAtTime(.16,when+.005,.025);
+  u.osc.connect(u.gain);u.gain.connect(audio.destination);u.osc.start(when);
+}
+async function playUnit(u,reset=false,when=null) {
+  if(u.playing)return;
+  try{
+    if(!apply(u))return;
+    const n=Number(u.el.duration.value);
+    if(!Number.isFinite(n)||n<.1||n>600)throw Error("T 必须在 0.1 到 600 秒之间。");
+    u.T=n;
+    if(reset||u.elapsed>=u.T)u.elapsed=0;
+    await ensureAudio();
+    if(u.osc)stopNodes(u,false);
+    const start=when===null?audio.currentTime+.025:when;
+    u.startAt=start-u.elapsed;
+    makeNodes(u,start);
+    u.playing=true;setState(u,"播放中",true);say(u,"正在播放本单元乐段。");
+    updateReadout(u);draw(u);scheduleTick();
+  }catch(e){say(u,e.message,true);}
+}
+function pauseUnit(u) {
+  if(!u.playing)return;
+  u.elapsed=clamp(audio.currentTime-u.startAt,0,u.T);
+  u.playing=false;stopNodes(u,true);setState(u,"已暂停");updateReadout(u);draw(u);say(u,"已暂停，可以继续播放。");
+}
+function stopUnit(u) {
+  u.playing=false;u.elapsed=0;stopNodes(u,true);setState(u,"待机");updateReadout(u);draw(u);say(u,"已停止。");
+}
+function finishUnit(u) {
+  u.playing=false;u.elapsed=u.T;stopNodes(u,true);setState(u,"已播放完毕");updateReadout(u);draw(u);say(u,"乐段播放完毕。");
+}
+function scheduleTick(){if(!raf)raf=requestAnimationFrame(tick);}
+function tick() {
+  raf=0;
+  let any=false;
+  for(const u of units){
+    if(!u.playing)continue;
+    any=true;
+    let elapsed=audio.currentTime-u.startAt;
+    if(u.loop){
+      if(elapsed>=u.T){elapsed=elapsed%u.T;u.startAt=audio.currentTime-elapsed;}
+    }else if(elapsed>=u.T){finishUnit(u);continue;}
+    u.elapsed=Math.max(0,elapsed);
+    const f=frequencyAt(u,u.elapsed);
+    if(u.osc&&Number.isFinite(f))u.osc.frequency.setTargetAtTime(Math.max(1,f),audio.currentTime,.012);
+    updateReadout(u);draw(u);
+  }
+  if(any)raf=requestAnimationFrame(tick);
+  updateGlobalState();
+}
+function updateGlobalState(){
+  const count=units.filter(u=>u.playing).length;
+  document.getElementById("globalDot").classList.toggle("live",count>0);
+  document.getElementById("globalState").textContent=count?count+" 个函数单元正在播放":"当前没有正在播放的单元";
+}
 
-  const pad = {
-    l:55,
-    r:18,
-    t:20,
-    b:36
+function renderTabs(){
+  const nav=document.getElementById("unitTabs");
+  nav.replaceChildren();
+  units.forEach((u,index)=>{
+    const tab=document.createElement("button");
+    tab.type="button";
+    tab.className="unit-tab"+(u.id===activeUnitId?" active":"");
+    tab.setAttribute("role","tab");
+    tab.setAttribute("aria-selected",u.id===activeUnitId?"true":"false");
+    tab.innerHTML='<span class="unit-tab-index"></span><span class="unit-tab-name"></span>';
+    tab.querySelector(".unit-tab-index").textContent=String(index+1).padStart(2,"0");
+    tab.querySelector(".unit-tab-name").textContent=u.name;
+    tab.title=u.name;
+    tab.addEventListener("click",()=>activateUnit(u.id));
+    nav.appendChild(tab);
+    u.el.root.hidden=u.id!==activeUnitId;
+  });
+}
+
+function activateUnit(id){
+  if(!units.some(u=>u.id===id))return;
+  activeUnitId=id;
+  renderTabs();
+  const u=units.find(item=>item.id===id);
+  if(u){requestAnimationFrame(()=>resize(u));}
+}
+
+function renameUnit(u){
+  // 不使用 window.prompt：部分浏览器/嵌入式页面会屏蔽原生提示框。
+  document.querySelector(".rename-dialog-backdrop")?.remove();
+
+  const backdrop=document.createElement("div");
+  backdrop.className="rename-dialog-backdrop";
+  backdrop.innerHTML=`
+    <div class="rename-dialog" role="dialog" aria-modal="true" aria-labelledby="renameDialogTitle">
+      <h3 id="renameDialogTitle">重命名函数单元</h3>
+      <input type="text" maxlength="40" aria-label="函数单元名称">
+      <div class="rename-dialog-actions">
+        <button type="button" class="rename-cancel">取消</button>
+        <button type="button" class="rename-confirm primary">确定</button>
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+
+  const input=backdrop.querySelector("input");
+  const close=()=>backdrop.remove();
+  const confirm=()=>{
+    const name=input.value.trim();
+    if(!name){input.focus();input.setCustomValidity("名称不能为空");input.reportValidity();return;}
+    u.name=name;
+    u.el.title.textContent=name;
+    renderTabs();
+    say(u,"已重命名为“"+name+"”。");
+    close();
   };
 
-  const pw = w-pad.l-pad.r;
-  const ph = h-pad.t-pad.b;
-
-  const margin = (ymax-ymin)*0.12 || 1;
-
-  ymin -= margin;
-  ymax += margin;
-
-  const X = x => pad.l+x/end*pw;
-  const Y = y => pad.t+(ymax-y)/(ymax-ymin)*ph;
-
-  // 网格
-  ctx.strokeStyle = "#1c3048";
-  ctx.lineWidth = 1;
-  ctx.fillStyle = "#8fa4bd";
-  ctx.font = "11px system-ui";
-
-  for (let i=0;i<=5;i++) {
-
-    const x = pad.l+pw*i/5;
-    const v = end*i/5;
-
-    ctx.beginPath();
-    ctx.moveTo(x,pad.t);
-    ctx.lineTo(x,pad.t+ph);
-    ctx.stroke();
-
-    const label = isPitch
-      ? v.toFixed(1)
-      : (v/Math.PI).toFixed(1)+"π";
-
-    ctx.fillText(label,x-12,h-12);
-  }
-
-  for (let i=0;i<=4;i++) {
-
-    const y = pad.t+ph*i/4;
-    const v = ymax-(ymax-ymin)*i/4;
-
-    ctx.beginPath();
-    ctx.moveTo(pad.l,y);
-    ctx.lineTo(pad.l+pw,y);
-    ctx.stroke();
-
-    ctx.fillText(v.toFixed(2),5,y+4);
-  }
-
-  // 零轴
-  if (ymin<=0 && ymax>=0) {
-
-    ctx.strokeStyle = "#48627c";
-    ctx.setLineDash([4,5]);
-
-    ctx.beginPath();
-    ctx.moveTo(pad.l,Y(0));
-    ctx.lineTo(pad.l+pw,Y(0));
-    ctx.stroke();
-
-    ctx.setLineDash([]);
-  }
-
-  // 函数曲线
-  ctx.save();
-
-  ctx.beginPath();
-  ctx.rect(pad.l,pad.t,pw,ph);
-  ctx.clip();
-
-  ctx.strokeStyle = "#58dced";
-  ctx.lineWidth = 2.2;
-  ctx.shadowColor = "#58dced";
-  ctx.shadowBlur = 8;
-
-  ctx.beginPath();
-
-  let pen = false;
-
-  for (let i=0;i<=1600;i++) {
-
-    const x = end*i/1600;
-    const v = valueAt(fn,x);
-
-    if (!Number.isFinite(v) || Math.abs(v)>1e8) {
-      pen = false;
-      continue;
-    }
-
-    if (!pen) {
-      ctx.moveTo(X(x),Y(v));
-      pen = true;
-    } else {
-      ctx.lineTo(X(x),Y(v));
-    }
-  }
-
-  ctx.stroke();
-
-  // 播放进度线
-  if (isPitch && playing) {
-
-    const x = clamp(elapsed,0,T);
-
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = "#ffca75";
-    ctx.lineWidth = 1.5;
-
-    ctx.beginPath();
-    ctx.moveTo(X(x),pad.t);
-    ctx.lineTo(X(x),pad.t+ph);
-    ctx.stroke();
-  }
-
-  ctx.restore();
-
-  $("axisX").textContent = isPitch
-    ? "横轴：时间 t（秒）"
-    : "横轴：相位 φ（弧度）";
-
-  $("axisY").textContent = isPitch
-    ? "纵轴：音高 y（半音）"
-    : "纵轴：波形振幅";
-
-  $("graphNote").textContent = isPitch
-    ? "音调函数的横轴范围为 0 至 T，纵轴表示相对中央 C 的半音数。"
-    : "音色函数展示一个完整周期（0 至 2π）的波形。";
-}
-
-
-/* ==========================
-   音色函数 → 周期波形
-========================== */
-
-// 对自定义音色函数进行傅里叶分解。
-// Web Audio API 使用傅里叶系数合成周期波形。
-
-function buildPeriodicWave() {
-
-  const harmonics = 64;
-  const samples = 2048;
-
-  const real = new Float32Array(harmonics+1);
-  const imag = new Float32Array(harmonics+1);
-
-  const values = new Float64Array(samples);
-
-  let mean = 0;
-
-  // 采样一个周期
-  for (let i=0;i<samples;i++) {
-
-    const phi = TAU*i/samples;
-    const v = valueAt(timbreFn,phi);
-
-    if (!Number.isFinite(v) || Math.abs(v)>1e6) {
-      throw Error("音色函数产生了无效波形。");
-    }
-
-    values[i] = v;
-    mean += v;
-  }
-
-  mean /= samples;
-
-  // 计算傅里叶系数
-  for (let n=1;n<=harmonics;n++) {
-
-    let a = 0;
-    let b = 0;
-
-    for (let i=0;i<samples;i++) {
-
-      const phi = TAU*i/samples;
-      const v = values[i]-mean;
-
-      a += v*Math.cos(n*phi);
-      b += v*Math.sin(n*phi);
-    }
-
-    real[n] = 2*a/samples;
-    imag[n] = 2*b/samples;
-  }
-
-  return audio.createPeriodicWave(
-    real,
-    imag,
-    {disableNormalization:false}
-  );
-}
-
-
-/* ==========================
-   应用函数
-========================== */
-
-function apply() {
-
-  try {
-
-    const nextPitch = compileExpression(
-      pitchInput.value,
-      "t"
-    );
-
-    const nextTimbre = compileExpression(
-      timbreInput.value,
-      "phi"
-    );
-
-    // 检查音色函数整个周期
-    for (let i=0;i<128;i++) {
-
-      const v = valueAt(nextTimbre,TAU*i/128);
-
-      if (!Number.isFinite(v) || Math.abs(v)>1e6) {
-        throw Error("音色函数在一个周期内出现无效值。");
-      }
-    }
-
-    pitchFn = nextPitch;
-    timbreFn = nextTimbre;
-
-    if (osc && audio) {
-      osc.setPeriodicWave(buildPeriodicWave());
-    }
-
-    draw();
-
-    say("两个函数已成功应用。");
-
-    return true;
-
-  } catch(e) {
-
-    say(e.message,true);
-
-    return false;
-  }
-}
-
-
-/* ==========================
-   音高显示
-========================== */
-
-function noteName(semi) {
-
-  const n = Math.round(semi);
-
-  const names = [
-    "C","C♯","D","D♯","E","F",
-    "F♯","G","G♯","A","A♯","B"
-  ];
-
-  const midi = 60+n;
-
-  return names[((midi%12)+12)%12]
-    +(Math.floor(midi/12)-1)
-    +" · "+(n>=0?"+":"")+n;
-}
-
-
-function updateReadout() {
-
-  $("timeRead").textContent = elapsed.toFixed(2)+" s";
-
-  const v = valueAt(pitchFn,elapsed);
-
-  $("pitchRead").textContent =
-    Number.isFinite(v) ? noteName(v) : "—";
-}
-
-
-/* ==========================
-   音频系统
-========================== */
-
-async function ensureAudio() {
-
-  if (!audio) {
-
-    const AC =
-      window.AudioContext ||
-      window.webkitAudioContext;
-
-    if (!AC) {
-      throw Error("当前浏览器不支持 Web Audio API。");
-    }
-
-    audio = new AC();
-  }
-
-  if (audio.state==="suspended") {
-    await audio.resume();
-  }
-}
-
-
-// 音高转换为频率
-// 中央 C4 = 261.625565 Hz
-
-function frequencyAt(t) {
-
-  const y = valueAt(pitchFn,t);
-
-  if (!Number.isFinite(y)) return 0;
-
-  return 261.625565 *
-    Math.pow(2,clamp(y,-96,96)/12);
-}
-
-
-// 淡出，避免突然停止产生爆音
-function fadeOut() {
-
-  if (gain && audio) {
-
-    const now = audio.currentTime;
-
-    gain.gain.cancelScheduledValues(now);
-
-    gain.gain.setTargetAtTime(
-      0.0001,
-      now,
-      0.015
-    );
-  }
-}
-
-
-function downloadAudio() {
-
-  const sampleRate = 44100;
-  const duration = T;
-  const totalSamples = Math.floor(sampleRate * duration);
-
-  if (!Number.isFinite(duration) || duration <= 0) {
-    alert("音频时长无效。");
-    return;
-  }
-
-  if (totalSamples > sampleRate * 600) {
-    alert("音频时长不能超过600秒。");
-    return;
-  }
-
-  const samples = new Float32Array(totalSamples);
-
-  let phase = 0;
-  let peak = 0;
-
-  // 第一阶段：生成音频采样
-  for (let i = 0; i < totalSamples; i++) {
-
-    const t = i / sampleRate;
-
-    // 音调函数值：单位为半音
-    const semitones = valueAt(pitchFn, t);
-
-    if (!Number.isFinite(semitones)) {
-      samples[i] = 0;
-      continue;
-    }
-
-    // 将半音转换为频率
-    const frequency = 261.625565 *
-      Math.pow(2, semitones / 12);
-
-    // 限制频率，避免超过奈奎斯特频率
-    const safeFrequency = Math.min(
-      Math.max(frequency, 0),
-      sampleRate * 0.45
-    );
-
-    // 计算当前相位
-    const phi = phase % (2 * Math.PI);
-
-    // 音色函数决定波形
-    let sample = valueAt(timbreFn, phi);
-
-    if (!Number.isFinite(sample)) {
-      sample = 0;
-    }
-
-    samples[i] = sample;
-    peak = Math.max(peak, Math.abs(sample));
-
-    // 累积相位
-    phase += 2 * Math.PI * safeFrequency / sampleRate;
-  }
-
-  // 第二阶段：归一化并添加淡入淡出
-  const fadeLength = Math.floor(sampleRate * 0.01);
-
-  for (let i = 0; i < totalSamples; i++) {
-
-    let fade = 1;
-
-    if (i < fadeLength) {
-      fade = i / fadeLength;
-    }
-
-    if (i >= totalSamples - fadeLength) {
-      fade = Math.min(
-        fade,
-        (totalSamples - 1 - i) / fadeLength
-      );
-    }
-
-    const normalized = peak > 0
-      ? samples[i] / peak * 0.8
-      : 0;
-
-    samples[i] = normalized * Math.max(0, fade);
-  }
-
-  // 第三阶段：生成 WAV 文件
-  const dataSize = totalSamples * 2;
-  const buffer = new ArrayBuffer(44 + dataSize);
-  const view = new DataView(buffer);
-
-  function writeString(offset, str) {
-    for (let i = 0; i < str.length; i++) {
-      view.setUint8(offset + i, str.charCodeAt(i));
-    }
-  }
-
-  // WAV 文件头
-  writeString(0, "RIFF");
-  view.setUint32(4, 36 + dataSize, true);
-  writeString(8, "WAVE");
-
-  // fmt 子块
-  writeString(12, "fmt ");
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, 1, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * 2, true);
-  view.setUint16(32, 2, true);
-  view.setUint16(34, 16, true);
-
-  // data 子块
-  writeString(36, "data");
-  view.setUint32(40, dataSize, true);
-
-  // 写入 PCM 数据
-  for (let i = 0; i < totalSamples; i++) {
-    const sample = Math.max(-1, Math.min(1, samples[i]));
-
-    const pcm = sample < 0
-      ? sample * 32768
-      : sample * 32767;
-
-    view.setInt16(44 + i * 2, pcm, true);
-  }
-
-  // 下载文件
-  const blob = new Blob([buffer], {
-    type: "audio/wav"
+  input.value=u.name;
+  input.addEventListener("input",()=>input.setCustomValidity(""));
+  backdrop.querySelector(".rename-cancel").addEventListener("click",close);
+  backdrop.querySelector(".rename-confirm").addEventListener("click",confirm);
+  input.addEventListener("keydown",ev=>{
+    if(ev.key==="Enter"){ev.preventDefault();confirm();}
+    if(ev.key==="Escape")close();
   });
-
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-
-  link.href = url;
-  link.download = "函数声音实验.wav";
-  link.click();
-
-  URL.revokeObjectURL(url);
+  backdrop.addEventListener("click",ev=>{if(ev.target===backdrop)close();});
+  requestAnimationFrame(()=>{input.focus();input.select();});
 }
-
-/* ==========================
-   播放
-========================== */
-
-async function play() {
-
-  if (playing) return;
-
-  try {
-
-    const nextT = Number(durationInput.value);
-
-    if (!Number.isFinite(nextT) || nextT<0.1 || nextT>600) {
-      throw Error("T 必须在 0.1 到 600 秒之间。");
-    }
-
-    T = nextT;
-
-    if (!apply()) return;
-
+async function playAll() {
+  const ready=units.filter(u=>apply(u));
+  if(!ready.length)return;
+  try{
     await ensureAudio();
-
-    if (elapsed>=T) elapsed=0;
-
-    if (!osc) {
-
-      osc = audio.createOscillator();
-      gain = audio.createGain();
-
-      osc.setPeriodicWave(buildPeriodicWave());
-
-      gain.gain.value = 0.0001;
-
-      osc.connect(gain);
-      gain.connect(audio.destination);
-
-      osc.start();
-
-    } else {
-
-      osc.setPeriodicWave(buildPeriodicWave());
+    const when=audio.currentTime+.08;
+    for(const u of ready){
+      if(u.osc)stopNodes(u,false);
+      const n=Number(u.el.duration.value);
+      if(!Number.isFinite(n)||n<.1||n>600){say(u,"T 必须在 0.1 到 600 秒之间。",true);continue;}
+      u.T=n;u.elapsed=0;u.playing=true;u.startAt=when;
+      makeNodes(u,when);setState(u,"播放中",true);say(u,"正在与其他单元同步播放。");updateReadout(u);draw(u);
     }
+    scheduleTick();
+    document.getElementById("globalConsole").textContent="已从头同步播放全部有效函数单元。";
+  }catch(e){document.getElementById("globalConsole").textContent=e.message;}
+}
+function pauseAll(){for(const u of units)pauseUnit(u);document.getElementById("globalConsole").textContent="已暂停全部函数单元。";updateGlobalState();}
+function stopAll(){for(const u of units)stopUnit(u);document.getElementById("globalConsole").textContent="已停止全部函数单元。";updateGlobalState();}
 
-    const now = audio.currentTime;
-
-    osc.frequency.cancelScheduledValues(now);
-
-    osc.frequency.setValueAtTime(
-      Math.max(1,frequencyAt(elapsed)),
-      now
-    );
-
-    gain.gain.cancelScheduledValues(now);
-
-    gain.gain.setTargetAtTime(
-      0.16,
-      now,
-      0.025
-    );
-
-    startAt = performance.now()-elapsed*1000;
-
-    playing = true;
-
-    $("play").disabled = true;
-    $("pause").disabled = false;
-    $("stop").disabled = false;
-
-    setState("播放中",true);
-
-    say("正在播放乐段。");
-
-    tick();
-
-  } catch(e) {
-
-    say(e.message,true);
+function downloadAudio(u) {
+  if(!apply(u))return;
+  const sampleRate=44100,duration=Number(u.el.duration.value),totalSamples=Math.floor(sampleRate*duration);
+  if(!Number.isFinite(duration)||duration<.1||duration>600){say(u,"T 必须在 0.1 到 600 秒之间。",true);return;}
+  const samples=new Float32Array(totalSamples);let phase=0,peak=0;
+  for(let i=0;i<totalSamples;i++){
+    const t=i/sampleRate,semitones=valueAt(u.pitchFn,t);
+    if(!Number.isFinite(semitones)){samples[i]=0;continue;}
+    const frequency=261.625565*Math.pow(2,clamp(semitones,-96,96)/12);
+    const safeFrequency=clamp(frequency,0,sampleRate*.45);
+    let sample=valueAt(u.timbreFn,phase%TAU);
+    if(!Number.isFinite(sample))sample=0;
+    samples[i]=sample;peak=Math.max(peak,Math.abs(sample));phase+=TAU*safeFrequency/sampleRate;
   }
+  const fadeLength=Math.floor(sampleRate*.01);
+  for(let i=0;i<totalSamples;i++){
+    let fade=1;
+    if(i<fadeLength)fade=i/fadeLength;
+    if(i>=totalSamples-fadeLength)fade=Math.min(fade,(totalSamples-1-i)/fadeLength);
+    samples[i]=(peak>0?samples[i]/peak*.8:0)*Math.max(0,fade);
+  }
+  const dataSize=totalSamples*2,buffer=new ArrayBuffer(44+dataSize),view=new DataView(buffer);
+  const write=(offset,str)=>{for(let i=0;i<str.length;i++)view.setUint8(offset+i,str.charCodeAt(i));};
+  write(0,"RIFF");view.setUint32(4,36+dataSize,true);write(8,"WAVE");write(12,"fmt ");view.setUint32(16,16,true);
+  view.setUint16(20,1,true);view.setUint16(22,1,true);view.setUint32(24,sampleRate,true);view.setUint32(28,sampleRate*2,true);
+  view.setUint16(32,2,true);view.setUint16(34,16,true);write(36,"data");view.setUint32(40,dataSize,true);
+  for(let i=0;i<totalSamples;i++){const s=clamp(samples[i],-1,1);view.setInt16(44+i*2,s<0?s*32768:s*32767,true);}
+  const url=URL.createObjectURL(new Blob([buffer],{type:"audio/wav"})),link=document.createElement("a");
+  link.href=url;link.download="函数声音_单元"+u.id+".wav";link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  say(u,"WAV 文件已生成并开始下载。");
 }
 
-
-/* ==========================
-   播放循环
-========================== */
-
-function tick() {
-
-  if (!playing) return;
-
-  elapsed = (performance.now()-startAt)/1000;
-
-  if (elapsed>=T) {
-
-    if (loopPlayback) {
-      elapsed = 0;
-      startAt = performance.now();
-    } else {
-      elapsed = T;
-      finish();
-      return;
+function bindUnit(u) {
+  const e=u.el;
+  e.remove.addEventListener("click",()=>{
+    if(units.length<=1){say(u,"至少保留一个函数单元。",true);return;}
+    const index=units.indexOf(u);
+    stopUnit(u);units.splice(index,1);e.root.remove();
+    if(activeUnitId===u.id){
+      const next=units[Math.min(index,units.length-1)];
+      activeUnitId=next.id;
     }
-  }
-
-  const f = frequencyAt(elapsed);
-
-  if (osc && audio && Number.isFinite(f)) {
-
-    const now = audio.currentTime;
-
-    osc.frequency.cancelScheduledValues(now);
-
-    osc.frequency.setTargetAtTime(
-      Math.max(1,f),
-      now,
-      0.012
-    );
-  }
-
-  updateReadout();
-  draw();
-
-  raf = requestAnimationFrame(tick);
-}
-
-
-/* ==========================
-   暂停、停止、结束
-========================== */
-
-function finish() {
-
-  playing = false;
-
-  cancelAnimationFrame(raf);
-
-  fadeOut();
-
-  $("play").disabled = false;
-  $("pause").disabled = true;
-  $("stop").disabled = false;
-
-  setState("已播放完毕");
-
-  updateReadout();
-  draw();
-
-  say("乐段播放完毕。");
-}
-
-
-function pause() {
-
-  if (!playing) return;
-
-  elapsed = clamp(
-    (performance.now()-startAt)/1000,
-    0,
-    T
-  );
-
-  playing = false;
-
-  cancelAnimationFrame(raf);
-
-  fadeOut();
-
-  $("play").disabled = false;
-  $("pause").disabled = true;
-
-  setState("已暂停");
-
-  updateReadout();
-  draw();
-
-  say("已暂停，可以继续播放。");
-}
-
-
-function stop() {
-
-  playing = false;
-
-  cancelAnimationFrame(raf);
-
-  elapsed = 0;
-
-  fadeOut();
-
-  $("play").disabled = false;
-  $("pause").disabled = true;
-  $("stop").disabled = true;
-
-  setState("待机");
-
-  updateReadout();
-  draw();
-
-  say("已停止。");
-}
-
-
-/* ==========================
-   图像切换
-========================== */
-
-function switchGraph(which) {
-
-  activeGraph = which;
-
-  $("pitchTab").classList.toggle(
-    "active",
-    which==="pitch"
-  );
-
-  $("timbreTab").classList.toggle(
-    "active",
-    which==="timbre"
-  );
-
-  draw();
-}
-
-
-/* ==========================
-   事件绑定
-========================== */
-
-$("apply").addEventListener("click",apply);
-
-$("loopToggle").addEventListener("click",()=>{
-  loopPlayback = !loopPlayback;
-
-  $("loopToggle").textContent =
-    "循环播放："+(loopPlayback?"开":"关");
-
-  say(loopPlayback
-    ? "已开启循环播放。"
-    : "已关闭循环播放。"
-  );
-});
-
-$("play").addEventListener("click",play);
-$("pause").addEventListener("click",pause);
-$("stop").addEventListener("click",stop);
-
-$("pitchTab").addEventListener(
-  "click",
-  ()=>switchGraph("pitch")
-);
-
-$("timbreTab").addEventListener(
-  "click",
-  ()=>switchGraph("timbre")
-);
-
-
-// 调整乐段长度
-durationInput.addEventListener("change",()=>{
-
-  const n = Number(durationInput.value);
-
-  if (Number.isFinite(n) && n>=0.1 && n<=600) {
-
-    T = n;
-    elapsed = clamp(elapsed,0,T);
-
-    draw();
-    updateReadout();
-
-    say("乐段长度已更新为 "+T+" 秒。");
-
-  } else {
-
-    say("T 必须在 0.1 到 600 秒之间。",true);
-  }
-});
-
-
-// 预设函数按钮
-document.querySelectorAll(".chip").forEach(button=>{
-
-  button.addEventListener("click",()=>{
-
-    if (button.dataset.target==="pitch") {
-
-      pitchInput.value = button.dataset.f;
-
-    } else {
-
-      timbreInput.value = button.dataset.f;
-    }
-
-    apply();
+    renderTabs();updateGlobalState();
   });
-});
+  e.rename.addEventListener("click",()=>renameUnit(u));
+  e.apply.addEventListener("click",()=>apply(u));
+  e.play.addEventListener("click",()=>playUnit(u));
+  e.pause.addEventListener("click",()=>pauseUnit(u));
+  e.stop.addEventListener("click",()=>stopUnit(u));
+  e.download.addEventListener("click",()=>downloadAudio(u));
+  e.loop.addEventListener("click",()=>{
+    u.loop=!u.loop;e.loop.textContent="循环播放："+(u.loop?"开":"关");say(u,u.loop?"已开启本单元循环播放。":"已关闭本单元循环播放。");
+  });
+  e.mute.addEventListener("click",()=>{
+    u.muted=!u.muted;e.mute.textContent="静音："+(u.muted?"开":"关");e.mute.classList.toggle("active",u.muted);
+    if(u.gain&&audio){const now=audio.currentTime;u.gain.gain.cancelScheduledValues(now);u.gain.gain.setTargetAtTime(u.muted?0:.16,now,.015);}
+    say(u,u.muted?"本单元已静音，播放进度不受影响。":"本单元已取消静音。");
+  });
+  e.pitchTab.addEventListener("click",()=>{u.activeGraph="pitch";e.pitchTab.classList.add("active");e.timbreTab.classList.remove("active");draw(u);});
+  e.timbreTab.addEventListener("click",()=>{u.activeGraph="timbre";e.timbreTab.classList.add("active");e.pitchTab.classList.remove("active");draw(u);});
+  e.duration.addEventListener("change",()=>{
+    const n=Number(e.duration.value);
+    if(Number.isFinite(n)&&n>=.1&&n<=600){u.T=n;u.elapsed=clamp(u.elapsed,0,u.T);updateReadout(u);draw(u);say(u,"乐段长度已更新为 "+u.T+" 秒。");}
+    else say(u,"T 必须在 0.1 到 600 秒之间。",true);
+  });
+  e.root.querySelectorAll(".chip").forEach(btn=>btn.addEventListener("click",()=>{
+    if(btn.dataset.target==="pitch")e.pitchInput.value=btn.dataset.f;else e.timbreInput.value=btn.dataset.f;
+    apply(u);
+  }));
+  [e.pitchInput,e.timbreInput].forEach(input=>input.addEventListener("keydown",ev=>{if(ev.key==="Enter")apply(u);}));
+}
 
-
-// 回车应用函数
-pitchInput.addEventListener("keydown",e=>{
-  if (e.key==="Enter") apply();
-});
-
-timbreInput.addEventListener("keydown",e=>{
-  if (e.key==="Enter") apply();
-});
-
-window.addEventListener("resize",resize);
-
-
-// 初始化
-resize();
-updateReadout();
-
+function addUnit() {
+  const root=document.getElementById("unitTemplate").content.firstElementChild.cloneNode(true);
+  const id=nextId++;
+  const name="函数单元 "+id;
+  root.querySelector(".unit-title").textContent=name;
+  document.getElementById("units").appendChild(root);
+  const q=s=>root.querySelector(s);
+  const u={
+    id,name,el:{
+      root,title:q(".unit-title"),rename:q(".rename"),remove:q(".remove"),canvas:q(".plot"),axisX:q(".axis-x"),axisY:q(".axis-y"),
+      graphNote:q(".graph-note"),timeRead:q(".time-read"),pitchRead:q(".pitch-read"),
+      pitchInput:q(".pitch-input"),timbreInput:q(".timbre-input"),duration:q(".duration"),
+      apply:q(".apply"),play:q(".play"),pause:q(".pause"),stop:q(".stop"),download:q(".download"),
+      loop:q(".loop-toggle"),mute:q(".mute"),pitchTab:q(".pitch-tab"),timbreTab:q(".timbre-tab"),
+      dot:q(".dot"),state:q(".state"),console:q(".console")
+    },
+    ctx:q(".plot").getContext("2d"),pitchFn:t=>12*Math.sin(TAU*t),timbreFn:phi=>Math.sin(phi),
+    T:5,elapsed:0,startAt:0,playing:false,loop:false,muted:false,osc:null,gain:null,activeGraph:"pitch"
+  };
+  units.push(u);bindUnit(u);
+  activeUnitId=u.id;
+  renderTabs();
+  resize(u);updateReadout(u);updateGlobalState();
+}
+document.getElementById("addUnit").addEventListener("click",addUnit);
+document.getElementById("playAll").addEventListener("click",playAll);
+document.getElementById("pauseAll").addEventListener("click",pauseAll);
+document.getElementById("stopAll").addEventListener("click",stopAll);
+window.addEventListener("resize",()=>{const u=units.find(item=>item.id===activeUnitId);if(u)resize(u);});
+addUnit();
 })();
 </script>
 </body>
